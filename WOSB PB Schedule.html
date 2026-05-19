@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOSB Port Availability Report</title>
+  <style>
+    :root {
+      --navy: #07141c;
+      --navy2: #0b1d27;
+      --ink: #1d1309;
+      --gold: #d7a147;
+      --gold2: #f3cf78;
+      --gold3: #8c5a1d;
+      --parchment: #e6d0a2;
+      --parchment2: #c9a970;
+      --line: rgba(72, 43, 17, .45);
+      --red: #8f251b;
+      --blue: #1e5d94;
+      --shield: #c99320;
+      --muted: #cab382;
+      --panel: rgba(5, 15, 22, .92);
+      --t1: #42a35d;
+      --t2: #2978bd;
+      --t3: #7e4bb6;
+      --t4: #d28c22;
+      --t5: #b94328;
+      --t6: #bd6b29;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      color: var(--gold2);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 7% 8%, rgba(255,255,255,.12), transparent 10%),
+        radial-gradient(circle at 92% 6%, rgba(215,161,71,.12), transparent 16%),
+        linear-gradient(180deg, rgba(8,19,28,.96), rgba(3,7,10,.98)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.13'/%3E%3C/svg%3E");
+      padding: 14px;
+    }
+
+    .scene {
+      max-width: 1660px;
+      margin: 0 auto;
+      min-height: calc(100vh - 28px);
+      border: 3px solid #6e4518;
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, rgba(2,8,12,.72), transparent 18%, transparent 82%, rgba(2,8,12,.8)),
+        radial-gradient(circle at 0% 100%, rgba(201,169,112,.16), transparent 22%),
+        radial-gradient(circle at 100% 100%, rgba(215,161,71,.16), transparent 24%),
+        linear-gradient(180deg, rgba(9,22,31,.94), rgba(3,8,11,.96));
+      box-shadow: 0 25px 80px rgba(0,0,0,.65), inset 0 0 80px rgba(0,0,0,.55);
+      position: relative;
+      overflow: hidden;
+      padding: 18px 22px 20px;
+    }
+
+    .scene::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 5% 87%, rgba(240,207,120,.13), transparent 13%),
+        radial-gradient(circle at 95% 89%, rgba(240,207,120,.16), transparent 15%);
+      opacity: .9;
+    }
+
+    .content { position: relative; z-index: 2; }
+
+    .title-frame {
+      border: 2px solid #9a671f;
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(11,29,39,.98), rgba(4,12,18,.96));
+      box-shadow: inset 0 0 24px rgba(215,161,71,.17), 0 10px 28px rgba(0,0,0,.45);
+      padding: 12px 160px 10px;
+      position: relative;
+      text-align: center;
+      min-height: 116px;
+    }
+
+    .title-frame::before,
+    .title-frame::after {
+      content: "☠";
+      position: absolute;
+      top: 15px;
+      width: 112px;
+      height: 84px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #8a5b1f;
+      border-radius: 10px;
+      font-size: 48px;
+      color: #e6c06b;
+      background: radial-gradient(circle, rgba(215,161,71,.18), rgba(0,0,0,.32));
+      text-shadow: 0 3px 0 #000;
+    }
+
+    .title-frame::before { left: 20px; content: "☸"; }
+    .title-frame::after { right: 20px; content: "⚓"; }
+
+    h1 {
+      margin: 0;
+      line-height: .95;
+      color: var(--gold2);
+      font-size: clamp(36px, 5vw, 74px);
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      text-shadow:
+        0 2px 0 #3c2308,
+        0 4px 0 #000,
+        0 0 18px rgba(243,207,120,.22);
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: clamp(18px, 2.2vw, 30px);
+      color: #f5e1aa;
+      letter-spacing: .055em;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .dateline {
+      margin-top: 7px;
+      font-size: 16px;
+      color: var(--gold2);
+      letter-spacing: .04em;
+    }
+
+    .legend-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 18px;
+      max-width: 970px;
+      margin: 16px auto 14px;
+    }
+
+    .legend {
+      border: 2px solid #744816;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(55,35,17,.95), rgba(14,24,31,.95));
+      min-height: 66px;
+      padding: 9px 12px 9px 78px;
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(0,0,0,.35);
+    }
+
+    .legend .icon {
+      position: absolute;
+      left: 14px;
+      top: 9px;
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+      border: 2px solid rgba(243,207,120,.5);
+      background: rgba(0,0,0,.25);
+    }
+
+    .legend strong {
+      display: block;
+      font-size: 20px;
+      text-transform: uppercase;
+      color: var(--gold2);
+    }
+
+    .legend span {
+      display: block;
+      color: #f3dca5;
+      font-size: 14px;
+      margin-top: 1px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .days {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px;
+    }
+
+    .day-card {
+      border: 3px solid #66410f;
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(230,208,162,.96), rgba(206,174,112,.96)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.15'/%3E%3C/svg%3E");
+      box-shadow: 0 8px 18px rgba(0,0,0,.45), inset 0 0 20px rgba(84,47,11,.22);
+      color: var(--ink);
+      min-height: 206px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .day-card.wide { grid-column: 1 / -1; }
+
+    .day-header {
+      position: relative;
+      margin: 0;
+      padding: 7px 12px 8px;
+      text-align: center;
+      color: var(--gold2);
+      background: linear-gradient(180deg, rgba(9,28,38,.96), rgba(7,16,22,.98));
+      border-bottom: 3px solid #66410f;
+      text-transform: uppercase;
+      font-size: 33px;
+      letter-spacing: .055em;
+      line-height: 1;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .day-header::before {
+      content: "☸";
+      position: absolute;
+      left: 24px;
+      top: -8px;
+      font-size: 52px;
+      color: #c28a34;
+      opacity: .85;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .table-wrap {
+      padding: 9px 12px 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+      table-layout: fixed;
+    }
+
+    th {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #2d1b0c;
+      border-bottom: 2px solid rgba(72,43,17,.35);
+      padding: 4px 3px;
+    }
+
+    td {
+      border-bottom: 1px solid rgba(72,43,17,.22);
+      padding: 4px 3px;
+      vertical-align: middle;
+      color: #241509;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .num { width: 25px; text-align: right; padding-right: 8px; }
+    .portcol { width: 34%; }
+    .tiercol { width: 45px; text-align: center; }
+    .typecol { width: 78px; }
+    .faccol { width: 23%; }
+    .windowcol { width: 64px; text-align: center; }
+    .teamcol { width: 72px; text-align: center; }
+
+    .tier-badge {
+      display: inline-block;
+      min-width: 31px;
+      text-align: center;
+      padding: 2px 4px;
+      color: #fff9dd;
+      border-radius: 5px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.25);
+      text-shadow: 0 1px 0 rgba(0,0,0,.65);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+    }
+
+    .T1 { background: var(--t1); }
+    .T2 { background: var(--t2); }
+    .T3 { background: var(--t3); }
+    .T4 { background: var(--t4); }
+    .T5 { background: var(--t5); }
+    .T6 { background: var(--t6); }
+
+    .type-attack { color: #7a1912; font-weight: 700; }
+    .type-defence { color: #17528a; font-weight: 700; }
+    .type-icon { margin-right: 5px; }
+
+    .empty {
+      padding: 32px 10px;
+      text-align: center;
+      color: #5b3a15;
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 16px;
+    }
+
+    .ribbon {
+      color: var(--gold2);
+      text-align: center;
+      font-size: 32px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 9px 16px;
+      background: linear-gradient(180deg, #7f321d, #3a160e);
+      border: 2px solid #8f5d1d;
+      border-radius: 50% 50% 14px 14px / 30% 30% 14px 14px;
+      text-shadow: 0 2px 0 #000;
+      box-shadow: 0 7px 16px rgba(0,0,0,.45);
+    }
+
+    .summary-card,
+    .protection-card,
+    .faction-strip {
+      border: 3px solid #7b4e17;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(9,28,38,.97), rgba(3,10,14,.97));
+      box-shadow: inset 0 0 24px rgba(215,161,71,.09), 0 8px 18px rgba(0,0,0,.42);
+    }
+
+    .summary-card {
+      padding: 12px 16px;
+    }
+
+    .sum-row {
+      display: grid;
+      grid-template-columns: 46px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(215,161,71,.28);
+      padding: 13px 0;
+    }
+
+    .sum-row:last-child { border-bottom: 0; }
+
+    .sum-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+      color: var(--gold2);
+    }
+
+    .sum-label {
+      color: var(--gold2);
+      text-transform: uppercase;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .sum-num {
+      color: #f6d38a;
+      font-size: 38px;
+      font-weight: 900;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .protection-card {
+      min-height: 300px;
+      overflow: hidden;
+    }
+
+    .mini-ribbon {
+      margin: 0;
+      padding: 9px 10px;
+      color: var(--gold2);
+      text-align: center;
+      text-transform: uppercase;
+      font-size: 19px;
+      background: linear-gradient(180deg, #775421, #28160b);
+      border-bottom: 2px solid #7b4e17;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .protection-list {
+      padding: 16px;
+      color: #f1dba4;
+      font-size: 18px;
+    }
+
+    .protection-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(215,161,71,.18);
+    }
+
+    .protection-empty {
+      padding: 62px 10px;
+      text-align: center;
+      font-size: 26px;
+      color: #f1dba4;
+      font-weight: 700;
+    }
+
+    .faction-strip {
+      margin: 16px auto 0;
+      max-width: 900px;
+      padding: 10px 16px 12px;
+      text-align: center;
+    }
+
+    .faction-title {
+      display: inline-block;
+      transform: translateY(-22px);
+      margin-bottom: -18px;
+      padding: 5px 28px;
+      border: 2px solid #7b4e17;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #162d37, #071018);
+      color: var(--gold2);
+      text-transform: uppercase;
+      font-size: 27px;
+      letter-spacing: .06em;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .factions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .faction {
+      min-height: 76px;
+      border-right: 1px solid rgba(215,161,71,.35);
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 10px;
+      text-align: left;
+    }
+
+    .faction:last-child { border-right: 0; }
+
+    .flag {
+      width: 42px;
+      height: 56px;
+      border: 2px solid rgba(215,161,71,.4);
+      background: linear-gradient(135deg, #6f2418, #1b3549);
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.35);
+    }
+
+    .faction strong {
+      display: block;
+      color: #f4d38d;
+      font-size: 17px;
+    }
+
+    .faction span {
+      color: #e8c06d;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .footer-note {
+      margin-top: 8px;
+      color: #d3b56f;
+      text-transform: uppercase;
+      font-size: 13px;
+      letter-spacing: .08em;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: 0 0 12px;
+      flex-wrap: wrap;
+    }
+
+    button, select, input {
+      font: inherit;
+      color: #f4d38d;
+      background: rgba(3,10,14,.85);
+      border: 1px solid #7b4e17;
+      border-radius: 8px;
+      padding: 8px 11px;
+    }
+
+    button {
+      cursor: pointer;
+      color: #221303;
+      background: linear-gradient(#f6d889, #b77924);
+      font-weight: 800;
+    }
+
+    .error {
+      border: 2px solid rgba(255,180,160,.45);
+      background: rgba(95,25,16,.5);
+      color: #ffe1d9;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 1280px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: 1fr 1fr; }
+      .ribbon { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 900px) {
+      .title-frame { padding: 108px 14px 12px; }
+      .title-frame::before { left: calc(50% - 120px); }
+      .title-frame::after { right: calc(50% - 120px); }
+      .legend-row, .days, .sidebar, .factions { grid-template-columns: 1fr; }
+      .day-card.wide { grid-column: auto; }
+      table { font-size: 13px; }
+      .faccol { display: none; }
+      td.faccol, th.faccol { display: none; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .scene { box-shadow: none; border-radius: 0; max-width: none; min-height: auto; }
+      .toolbar { display: none; }
+      .day-card, .summary-card, .protection-card, .faction-strip { break-inside: avoid; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="scene">
+    <div class="content">
+      <div class="title-frame">
+        <h1>WOSB Port Availability Report</h1>
+        <div class="subtitle">Next day each port is attackable / defendable</div>
+        <div class="dateline">
+          Current data for <span id="reportDate">loading…</span>
+          &nbsp; • &nbsp; Report time <span id="reportTime">loading…</span>
+          &nbsp; • &nbsp; <span id="lastUpdated">loading…</span>
+        </div>
+      </div>
+
+      <div class="legend-row">
+        <div class="legend">
+          <div class="icon">⚔️</div>
+          <strong>Attack</strong>
+          <span>Port can be attacked</span>
+        </div>
+        <div class="legend">
+          <div class="icon">🛡️</div>
+          <strong>Defence</strong>
+          <span>Port can be defended</span>
+        </div>
+        <div class="legend">
+          <div class="icon">🟨</div>
+          <strong>Protection Possible</strong>
+          <span>Column E / protection flag</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <select id="tierFilter">
+          <option value="all">All tiers</option>
+          <option value="T1">T1</option>
+          <option value="T2">T2</option>
+          <option value="T3">T3</option>
+          <option value="T4">T4</option>
+          <option value="T5">T5</option>
+          <option value="T6">T6</option>
+        </select>
+        <input id="searchBox" type="search" placeholder="Search port or faction…" />
+        <button id="refreshBtn" type="button">Refresh live data</button>
+      </div>
+
+      <div id="error"></div>
+
+      <div class="layout">
+        <section class="days" id="days"></section>
+
+        <aside class="sidebar">
+          <div class="ribbon">Summary</div>
+
+          <div class="summary-card">
+            <div class="sum-row">
+              <div class="sum-icon">☸</div>
+              <div class="sum-label">Total Ports</div>
+              <div class="sum-num" id="totalCount">0</div>
+            </div>
+            <div class="sum-row">
+              <div class="sum-icon">⚔️</div>
+              <div class="sum-label">Attackable</div>
+              <div class="sum-num" id="attackCount">0</div>
+            </div>
+            <div class="sum-row">
+              <div class="sum-icon">🛡️</div>
+              <div class="sum-label">Defendable</div>
+              <div class="sum-num" id="defenceCount">0</div>
+            </div>
+            <div class="sum-row">
+              <div class="sum-icon">🟨</div>
+              <div class="sum-label">Protection Possible</div>
+              <div class="sum-num" id="protectionCount">0</div>
+            </div>
+          </div>
+
+          <div class="protection-card">
+            <h3 class="mini-ribbon">Protection Possible Ports</h3>
+            <div class="protection-list" id="protectionList"></div>
+          </div>
+        </aside>
+      </div>
+
+      <section class="faction-strip">
+        <div class="faction-title">Factions</div>
+        <div class="factions" id="factions"></div>
+        <div class="footer-note">Faction counts reflect the number of ports first available on their faction</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const SHEET_ID = "1MC69vfXqy9POa1TysJbD6QYyk1DpvmWEbg9iD_aNFVw";
+    const GID = "613614793";
+    const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+    const els = {
+      reportDate: document.getElementById("reportDate"),
+      reportTime: document.getElementById("reportTime"),
+      lastUpdated: document.getElementById("lastUpdated"),
+      days: document.getElementById("days"),
+      error: document.getElementById("error"),
+      totalCount: document.getElementById("totalCount"),
+      attackCount: document.getElementById("attackCount"),
+      defenceCount: document.getElementById("defenceCount"),
+      protectionCount: document.getElementById("protectionCount"),
+      protectionList: document.getElementById("protectionList"),
+      factions: document.getElementById("factions"),
+      tierFilter: document.getElementById("tierFilter"),
+      searchBox: document.getElementById("searchBox"),
+      refreshBtn: document.getElementById("refreshBtn")
+    };
+
+    let ports = [];
+    let dayLabels = [];
+
+    function normalise(v) {
+      return v === null || v === undefined ? "" : String(v).trim();
+    }
+
+    function cellText(cell) {
+      if (!cell) return "";
+      if (cell.f !== undefined && cell.f !== null) return normalise(cell.f);
+      if (cell.v !== undefined && cell.v !== null) return normalise(cell.v);
+      return "";
+    }
+
+    function isTrue(value) {
+      const v = normalise(value).toLowerCase();
+      return v === "true" || v === "yes" || v === "1" || v === "tak" || v === "prawda";
+    }
+
+    function findHeaderIndex(headers, names) {
+      const clean = headers.map(h => h.toLowerCase().replace(/\s+/g, " ").trim());
+      for (const name of names) {
+        const idx = clean.indexOf(name.toLowerCase());
+        if (idx >= 0) return idx;
+      }
+      for (const name of names) {
+        const idx = clean.findIndex(h => h.includes(name.toLowerCase()));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    }
+
+    function tierFromText(text) {
+      const m = normalise(text).match(/\bT([1-6])\b/i);
+      return m ? `T${m[1]}` : "";
+    }
+
+    function battleSizeFromText(text) {
+      const m = normalise(text).match(/\(([^)]+)\)/);
+      return m ? m[1].replace(/va/i, "vs") : "";
+    }
+
+    function cleanPortName(text) {
+      return normalise(text)
+        .replace(/\s*\([^)]*\)\s*/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function parseDate(text) {
+      const m = normalise(text).match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+      if (!m) return null;
+      const year = Number(m[3].length === 2 ? "20" + m[3] : m[3]);
+      const date = new Date(year, Number(m[2]) - 1, Number(m[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function dateLabel(base, offset, fallback) {
+      if (!base) {
+        const clean = normalise(fallback);
+        if (offset === 0) return clean && clean !== "D+0" ? clean : "Today";
+        if (/^\d+$/.test(clean)) return `D+${clean}`;
+        return clean || `D+${offset}`;
+      }
+
+      const d = new Date(base);
+      d.setDate(d.getDate() + offset);
+      const weekday = d.toLocaleDateString("en-GB", { weekday: "long" });
+      const month = d.toLocaleDateString("en-GB", { month: "short" });
+      return `${weekday} ${d.getDate()} ${month}`;
+    }
+
+    function firstAvailableDay(port) {
+      return port.days.find(d => d.available);
+    }
+
+    function protectionPossible(value) {
+      const v = normalise(value).toLowerCase();
+      return ["true", "yes", "y", "1", "possible", "tak"].includes(v);
+    }
+
+    function parseTable(response) {
+      if (!response || response.status !== "ok") {
+        throw new Error(response?.errors?.[0]?.detailed_message || "Google returned no usable sheet data.");
+      }
+
+      const rows = response.table.rows.map(r => (r.c || []).map(cellText));
+      if (rows.length < 4) throw new Error("The sheet did not contain enough rows to build the report.");
+
+      const reportDateText = rows[0]?.join(" ").match(/Report day\s*(.*)/i)?.[1] || rows[0]?.[0] || "";
+      const reportTimeText = rows[1]?.join(" ").match(/Report time\s*(.*)/i)?.[1] || rows[1]?.[0] || "";
+
+      els.reportDate.textContent = reportDateText || "Not found";
+      els.reportTime.textContent = reportTimeText || "Not found";
+
+      const headers = rows[2];
+      const baseDate = parseDate(reportDateText);
+
+      const portDetailIdx = 0;
+      const factionIdx = findHeaderIndex(headers, ["Faction"]);
+      const protectionIdx = findHeaderIndex(headers, ["Protection Possible"]);
+      const timeRemainingIdx = findHeaderIndex(headers, ["Time remaining (hours)", "Time remaining"]);
+      const probableIdx = findHeaderIndex(headers, ["Probable time remaining (hours)", "Probable time remaining"]);
+
+      /*
+        Battle Window Start is column G in the source sheet.
+        JavaScript arrays are zero-based, so column G = index 6.
+      */
+      const windowIdx = 6;
+
+      let portNameIdx = findHeaderIndex(headers, ["Att/Def"]);
+      if (portNameIdx < 0) portNameIdx = 7;
+
+      let dayStartIdx = findHeaderIndex(headers, ["D+0"]);
+      if (dayStartIdx < 0) {
+        dayStartIdx = headers.findIndex((h, idx) => idx > portNameIdx && /^D\+\d+$/i.test(normalise(h)));
+      }
+      if (dayStartIdx < 0) dayStartIdx = portNameIdx + 2;
+
+      dayLabels = [];
+      for (let i = dayStartIdx; i < headers.length; i++) {
+        const offset = i - dayStartIdx;
+        dayLabels.push(dateLabel(baseDate, offset, headers[i]));
+      }
+
+      ports = rows.slice(3)
+        .filter(row => row.some(Boolean))
+        .map(row => {
+          const rawDetail = row[portDetailIdx] || "";
+          const rawName = row[portNameIdx] || rawDetail;
+
+          /*
+            Defence/Attack detection:
+            Scan every non-day info column before D+0 for Attack / Defence / Defense.
+            This fixes rows like Cursed City if the type is not in the expected adjacent column.
+          */
+          const infoCells = row.slice(0, dayStartIdx).map(normalise);
+          const typeText = infoCells.join(" | ");
+          const type = /\bdefen[cs]e\b/i.test(typeText)
+            ? "Defence"
+            : /\battack\b/i.test(typeText)
+              ? "Attack"
+              : "Attack";
+
+          return {
+            rawDetail,
+            name: cleanPortName(rawName),
+            displayName: cleanPortName(rawDetail || rawName),
+            faction: row[factionIdx] || "",
+            protection: row[protectionIdx] || "",
+            protectionBool: protectionPossible(row[protectionIdx]),
+            timeRemaining: row[timeRemainingIdx] || "",
+            probableTime: row[probableIdx] || "",
+            battleWindow: row[windowIdx] || "",
+            tier: tierFromText(rawDetail || rawName),
+            battleSize: battleSizeFromText(rawDetail || rawName),
+            type,
+            days: dayLabels.map((label, offset) => ({
+              label,
+              offset,
+              available: isTrue(row[dayStartIdx + offset])
+            }))
+          };
+        })
+        .filter(port => port.name && port.days.length);
+    }
+
+    function filteredPorts() {
+      const tier = els.tierFilter.value;
+      const q = els.searchBox.value.trim().toLowerCase();
+
+      return ports.filter(port => {
+        if (tier !== "all" && port.tier !== tier) return false;
+        if (q) {
+          const haystack = [port.name, port.displayName, port.faction, port.tier, port.type, port.battleSize].join(" ").toLowerCase();
+          return haystack.includes(q);
+        }
+        return true;
+      });
+    }
+
+    function render() {
+      const listed = filteredPorts().filter(firstAvailableDay);
+
+      els.totalCount.textContent = listed.length;
+      els.attackCount.textContent = listed.filter(p => p.type === "Attack").length;
+      els.defenceCount.textContent = listed.filter(p => p.type === "Defence").length;
+
+      const protectionPorts = listed.filter(p => p.protectionBool);
+      els.protectionCount.textContent = protectionPorts.length;
+      renderProtection(protectionPorts);
+      renderFactionCounts(listed);
+      renderDays(listed);
+    }
+
+    function renderDays(listed) {
+      els.days.innerHTML = "";
+
+      dayLabels.forEach((label, offset) => {
+        const dayPorts = listed
+          .filter(port => firstAvailableDay(port)?.offset === offset)
+          .sort((a, b) => {
+            const aw = Number(a.battleWindow || 999);
+            const bw = Number(b.battleWindow || 999);
+            if (aw !== bw) return aw - bw;
+            if (a.type !== b.type) return a.type.localeCompare(b.type);
+            return a.name.localeCompare(b.name);
+          });
+
+        const card = document.createElement("article");
+        card.className = `day-card ${offset === dayLabels.length - 1 && dayPorts.length > 4 ? "wide" : ""}`;
+
+        card.innerHTML = `
+          <h2 class="day-header">${escapeHtml(label)}</h2>
+          <div class="table-wrap">
+            ${dayPorts.length ? renderTable(dayPorts) : `<div class="empty">No ports</div>`}
+          </div>
+        `;
+
+        els.days.appendChild(card);
+      });
+    }
+
+    function renderTable(dayPorts) {
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th class="num"></th>
+              <th class="portcol">Port</th>
+              <th class="tiercol">Tier</th>
+              <th class="typecol">Type</th>
+              <th class="faccol">Faction</th>
+              <th class="windowcol">Window</th>
+              <th class="teamcol">Team</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dayPorts.map((p, i) => `
+              <tr>
+                <td class="num">${i + 1}</td>
+                <td class="portcol" title="${escapeHtml(p.displayName || p.name)}">${escapeHtml(p.displayName || p.name)}</td>
+                <td class="tiercol">${p.tier ? `<span class="tier-badge ${p.tier}">${escapeHtml(p.tier)}</span>` : "—"}</td>
+                <td class="typecol ${p.type === "Defence" ? "type-defence" : "type-attack"}">
+                  <span class="type-icon">${p.type === "Defence" ? "🛡️" : "⚔️"}</span>${escapeHtml(p.type)}
+                </td>
+                <td class="faccol" title="${escapeHtml(p.faction)}">${escapeHtml(p.faction || "—")}</td>
+                <td class="windowcol">${escapeHtml(formatWindow(p.battleWindow))}</td>
+                <td class="teamcol">${escapeHtml(p.battleSize || "—")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function formatWindow(value) {
+      const v = normalise(value);
+      if (!v) return "—";
+
+      const numeric = v.match(/^(\d{1,2})(?:\.0+)?$/);
+      if (numeric) return `${numeric[1].padStart(2, "0")}:00`;
+
+      const hourOnly = v.match(/^(\d{1,2}):?00?$/);
+      if (hourOnly) return `${hourOnly[1].padStart(2, "0")}:00`;
+
+      return v;
+    }
+
+    function renderProtection(items) {
+      if (!items.length) {
+        els.protectionList.innerHTML = `<div class="protection-empty">No ports</div>`;
+        return;
+      }
+
+      els.protectionList.innerHTML = items.map(p => `
+        <div class="protection-item">
+          <span>${escapeHtml(p.displayName || p.name)}</span>
+          <strong>${escapeHtml(firstAvailableDay(p)?.label || "")}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderFactionCounts(listed) {
+      const counts = new Map();
+
+      listed.forEach(p => {
+        const faction = p.faction || "Unknown";
+        counts.set(faction, (counts.get(faction) || 0) + 1);
+      });
+
+      const symbols = {
+        "Espaniol": "🦁",
+        "Kai & Severia": "🐺",
+        "Antilia": "☀️",
+        "Pirates": "☠️"
+      };
+
+      const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+      els.factions.innerHTML = sorted.length ? sorted.map(([name, count]) => `
+        <div class="faction">
+          <div class="flag">${symbols[name] || "⚑"}</div>
+          <div>
+            <strong>${escapeHtml(name)}</strong>
+            <span>♟ ${count}</span>
+          </div>
+        </div>
+      `).join("") : `<div class="faction"><div class="flag">⚑</div><div><strong>No factions</strong><span>0</span></div></div>`;
+    }
+
+    function escapeHtml(str) {
+      return normalise(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function showError(message) {
+      els.error.innerHTML = `<div class="error"><strong>Data load problem:</strong> ${escapeHtml(message)}</div>`;
+      els.days.innerHTML = "";
+    }
+
+    function loadSheet() {
+      els.error.innerHTML = "";
+      els.refreshBtn.disabled = true;
+      els.refreshBtn.textContent = "Refreshing…";
+
+      const oldScript = document.getElementById("sheet-json-script");
+      if (oldScript) oldScript.remove();
+
+      window.google = window.google || {};
+      window.google.visualization = window.google.visualization || {};
+      window.google.visualization.Query = {
+        setResponse: function(response) {
+          try {
+            parseTable(response);
+            render();
+            els.lastUpdated.textContent = `refreshed ${new Date().toLocaleTimeString()}`;
+          } catch (err) {
+            showError(err.message);
+          } finally {
+            els.refreshBtn.disabled = false;
+            els.refreshBtn.textContent = "Refresh live data";
+          }
+        }
+      };
+
+      const script = document.createElement("script");
+      script.id = "sheet-json-script";
+      script.onerror = () => {
+        showError("Could not load the Google Sheet. Check that the document is public/viewable.");
+        els.refreshBtn.disabled = false;
+        els.refreshBtn.textContent = "Refresh live data";
+      };
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json&cacheBust=${Date.now()}`;
+      document.body.appendChild(script);
+    }
+
+    els.refreshBtn.addEventListener("click", loadSheet);
+    els.tierFilter.addEventListener("change", render);
+    els.searchBox.addEventListener("input", render);
+
+    loadSheet();
+    setInterval(loadSheet, AUTO_REFRESH_MS);
+  </script>
+</body>
+</html>
