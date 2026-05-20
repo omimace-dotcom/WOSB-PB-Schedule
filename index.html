@@ -743,55 +743,67 @@
       const rows = response.table.rows.map(r => (r.c || []).map(cellText));
       if (rows.length < 4) throw new Error("The sheet did not contain enough rows to build the report.");
 
-      const reportDateText = rows[0]?.join(" ").match(/Report day\s*(.*)/i)?.[1] || rows[0]?.[0] || "";
-      const reportTimeText = rows[1]?.join(" ").match(/Report time\s*(.*)/i)?.[1] || rows[1]?.[0] || "";
+      /*
+        FIXED SOURCE LAYOUT FOR THIS SHEET
+
+        B1 = report date
+        G  = Battle Window Start
+        H  = Port / Att-Def port field
+        I  = Type, usually Attack or Defence
+        K:P = the six live day availability columns
+
+        This avoids the previous issue where the page tried to auto-discover
+        the day columns and accidentally read the wrong TRUE/FALSE data.
+      */
+
+      const reportDateRow = rows.find(row => row.join(" ").match(/Report day/i)) || rows[0] || [];
+      const reportTimeRow = rows.find(row => row.join(" ").match(/Report time/i)) || rows[1] || [];
+
+      const reportDateText = reportDateRow.join(" ").match(/Report day\s*(.*)/i)?.[1] || reportDateRow[1] || reportDateRow[0] || "";
+      const reportTimeText = reportTimeRow.join(" ").match(/Report time\s*(.*)/i)?.[1] || reportTimeRow[1] || reportTimeRow[0] || "";
 
       els.reportDate.textContent = reportDateText || "Not found";
       els.reportTime.textContent = reportTimeText || "Not found";
 
-      const headers = rows[2];
       const baseDate = parseDate(reportDateText);
 
-      const portDetailIdx = 0;
-      const factionIdx = findHeaderIndex(headers, ["Faction"]);
-      const protectionIdx = findHeaderIndex(headers, ["Protection Possible"]);
-      const timeRemainingIdx = findHeaderIndex(headers, ["Time remaining (hours)", "Time remaining"]);
-      const probableIdx = findHeaderIndex(headers, ["Probable time remaining (hours)", "Probable time remaining"]);
+      const portDetailIdx = 0;     // Column A
+      const factionIdx = 1;        // Column B
+      const protectionIdx = 2;     // Column C
+      const timeRemainingIdx = 3;  // Column D
+      const probableIdx = 4;       // Column E
+      const windowIdx = 6;         // Column G
+      const portNameIdx = 7;       // Column H
+      const typeIdx = 8;           // Column I
+
+      const dayColumnIndexes = [10, 11, 12, 13, 14, 15]; // Columns K:P only
+
+      dayLabels = dayColumnIndexes.map((_, offset) => {
+        return dateLabel(baseDate, offset, `D+${offset}`);
+      });
 
       /*
-        Battle Window Start is column G in the source sheet.
-        JavaScript arrays are zero-based, so column G = index 6.
+        Data rows are all rows with a port in A/H and at least one TRUE/FALSE
+        style value in K:P. This skips report date rows and header rows.
       */
-      const windowIdx = 6;
+      const dataRows = rows.filter(row => {
+        const hasPort = normalise(row[portDetailIdx]) || normalise(row[portNameIdx]);
+        const dayValues = dayColumnIndexes.map(i => normalise(row[i]).toLowerCase());
+        const hasAvailabilityValue = dayValues.some(v =>
+          ["true", "false", "yes", "no", "1", "0", "tak", "prawda"].includes(v)
+        );
+        const looksLikeHeader = row.join(" ").match(/Faction|Protection Possible|Battle Window|Att\/Def/i);
+        const looksLikeReportRow = row.join(" ").match(/Report day|Report time/i);
+        return hasPort && hasAvailabilityValue && !looksLikeHeader && !looksLikeReportRow;
+      });
 
-      let portNameIdx = findHeaderIndex(headers, ["Att/Def"]);
-      if (portNameIdx < 0) portNameIdx = 7;
-
-      let dayStartIdx = findHeaderIndex(headers, ["D+0"]);
-      if (dayStartIdx < 0) {
-        dayStartIdx = headers.findIndex((h, idx) => idx > portNameIdx && /^D\+\d+$/i.test(normalise(h)));
-      }
-      if (dayStartIdx < 0) dayStartIdx = portNameIdx + 2;
-
-      dayLabels = [];
-      for (let i = dayStartIdx; i < headers.length; i++) {
-        const offset = i - dayStartIdx;
-        dayLabels.push(dateLabel(baseDate, offset, headers[i]));
-      }
-
-      ports = rows.slice(3)
-        .filter(row => row.some(Boolean))
+      ports = dataRows
         .map(row => {
           const rawDetail = row[portDetailIdx] || "";
           const rawName = row[portNameIdx] || rawDetail;
+          const rawType = row[typeIdx] || "";
 
-          /*
-            Defence/Attack detection:
-            Scan every non-day info column before D+0 for Attack / Defence / Defense.
-            This fixes rows like Cursed City if the type is not in the expected adjacent column.
-          */
-          const infoCells = row.slice(0, dayStartIdx).map(normalise);
-          const typeText = infoCells.join(" | ");
+          const typeText = `${rawType} | ${row.slice(0, 10).map(normalise).join(" | ")}`;
           const type = /\bdefen[cs]e\b/i.test(typeText)
             ? "Defence"
             : /\battack\b/i.test(typeText)
@@ -811,10 +823,10 @@
             tier: tierFromText(rawDetail || rawName),
             battleSize: battleSizeFromText(rawDetail || rawName),
             type,
-            days: dayLabels.map((label, offset) => ({
-              label,
+            days: dayColumnIndexes.map((colIndex, offset) => ({
+              label: dayLabels[offset],
               offset,
-              available: isTrue(row[dayStartIdx + offset])
+              available: isTrue(row[colIndex])
             }))
           };
         })
@@ -1012,7 +1024,7 @@
         els.refreshBtn.textContent = "Refresh live data";
       };
       const tq = encodeURIComponent("select *");
-      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json&tq=${tq}&headers=0&cacheBust=${Date.now()}_${Math.random()}`;
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json&cacheBust=${Date.now()}_${Math.random()}`;
       document.body.appendChild(script);
     }
 
