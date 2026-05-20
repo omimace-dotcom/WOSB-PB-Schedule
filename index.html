@@ -1011,7 +1011,8 @@
         els.refreshBtn.disabled = false;
         els.refreshBtn.textContent = "Refresh live data";
       };
-      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json&cacheBust=${Date.now()}`;
+      const tq = encodeURIComponent("select *");
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json&tq=${tq}&headers=0&cacheBust=${Date.now()}_${Math.random()}`;
       document.body.appendChild(script);
     }
 
