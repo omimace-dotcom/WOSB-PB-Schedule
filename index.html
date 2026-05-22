@@ -296,6 +296,41 @@
     .type-defence { color: #17528a; font-weight: 700; }
     .type-icon { margin-right: 5px; }
 
+    
+    .protection-row td {
+      background: rgba(215, 161, 71, .16);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+    }
+
+    .protection-port {
+      font-weight: 700;
+    }
+
+    .shield-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 22px;
+      margin-left: 8px;
+      padding: 0 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(72,43,17,.35);
+      background: linear-gradient(180deg, #f2d17b, #c08b27);
+      color: #2b1708;
+      font-size: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+      vertical-align: middle;
+    }
+
+    .legend-protection-note {
+      margin-top: 6px;
+      font-size: 15px;
+      color: #f3dca5;
+      text-align: center;
+    }
+
+
     .empty {
       padding: 32px 10px;
       text-align: center;
@@ -550,7 +585,7 @@
         <div class="dateline">
           Current data for <span id="reportDate">loading…</span>
           &nbsp; • &nbsp; Report time <span id="reportTime">loading…</span>
-          &nbsp; • &nbsp; <span id="lastUpdated">loading…</span> &nbsp; • &nbsp; Source map A1:P300 v6
+          &nbsp; • &nbsp; <span id="lastUpdated">loading…</span> &nbsp; • &nbsp; Source map A1:P300 v9
         </div>
       </div>
 
@@ -568,7 +603,7 @@
         <div class="legend">
           <div class="icon">🟨</div>
           <strong>Protection Possible</strong>
-          <span>Column E / protection flag</span>
+          <span>Shown by a shield on the port in the calendar</span>
         </div>
       </div>
 
@@ -618,8 +653,10 @@
           </div>
 
           <div class="protection-card">
-            <h3 class="mini-ribbon">Protection Possible Ports</h3>
-            <div class="protection-list" id="protectionList"></div>
+            <h3 class="mini-ribbon">Protection Marker</h3>
+            <div class="protection-list" id="protectionList">
+              <div class="protection-empty">🛡️ Marked in the calendar</div>
+            </div>
           </div>
         </aside>
       </div>
@@ -732,7 +769,7 @@
 
     function protectionPossible(value) {
       const v = normalise(value).toLowerCase();
-      return ["true", "yes", "y", "1", "possible", "tak"].includes(v);
+      return v === "true" || v === "yes" || v === "y" || v === "1" || v === "possible" || v === "tak";
     }
 
     function parseTable(response) {
@@ -741,11 +778,10 @@
       }
 
       /*
-        IMPORTANT:
-        This version expects the Google feed to be requested using range=A1:P300&headers=0.
-        That means the returned data keeps the physical sheet positions:
+        Source map v8:
+        Physical range A1:P300.
 
-        A = index 0
+        D = index 3 = Protection Possible
         G = index 6 = Battle Window Start
         K:P = indexes 10:15 = daily TRUE/FALSE availability cells
         K2:P2 = indexes 10:15 on row 2 = day/date labels
@@ -761,7 +797,7 @@
 
       const COL_PORT_DETAIL = 0;   // A
       const COL_FACTION = 1;       // B
-      const COL_PROTECTION = 2;    // C
+      const COL_PROTECTION = 3;    // D
       const COL_TIME_LEFT = 4;     // E
       const COL_PROBABLE = 5;      // F
       const COL_WINDOW = 6;        // G
@@ -770,7 +806,13 @@
       const DAY_START = 10;        // K
       const DAY_END = 15;          // P
 
-      // Report date/time live near the top of the sheet.
+      const headerRowIndex = rows.findIndex(row =>
+        row.some(cell => /^Faction$/i.test(normalise(cell))) ||
+        row.some(cell => /Battle Window Start/i.test(normalise(cell))) ||
+        row.some(cell => /Att\/Def/i.test(normalise(cell))) ||
+        row.some(cell => /Protection Possible/i.test(normalise(cell)))
+      );
+
       const reportDateText =
         rows.flat().find(cell => /Report day/i.test(cell))?.match(/Report day\s*(.*)/i)?.[1] ||
         rows[0].find(cell => /\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(cell)) ||
@@ -787,7 +829,6 @@
 
       const baseDate = parseDate(reportDateText);
 
-      // Day labels come from K2:P2. If blank, generate from report date.
       const dayLabelRow = rows[1] || [];
       dayLabels = [];
       for (let col = DAY_START; col <= DAY_END; col++) {
@@ -795,13 +836,6 @@
         const fromSheet = normalise(dayLabelRow[col]);
         dayLabels.push(fromSheet ? fromSheet : dateLabel(baseDate, offset, ""));
       }
-
-      // Find the real header row, then read data below it.
-      const headerRowIndex = rows.findIndex(row =>
-        row.some(cell => /^Faction$/i.test(normalise(cell))) ||
-        row.some(cell => /Battle Window Start/i.test(normalise(cell))) ||
-        row.some(cell => /Att\/Def/i.test(normalise(cell)))
-      );
 
       const dataStart = headerRowIndex >= 0 ? headerRowIndex + 1 : 3;
 
@@ -826,13 +860,15 @@
                 ? "Defence"
                 : "Attack";
 
+          const protectionValue = row[COL_PROTECTION] || "";
+
           return {
             rawDetail,
             name: cleanPortName(rawName),
             displayName: cleanPortName(rawDetail || rawName),
             faction: row[COL_FACTION] || "",
-            protection: row[COL_PROTECTION] || "",
-            protectionBool: protectionPossible(row[COL_PROTECTION]),
+            protection: protectionValue,
+            protectionBool: protectionPossible(protectionValue),
             timeRemaining: row[COL_TIME_LEFT] || "",
             probableTime: row[COL_PROBABLE] || "",
             battleWindow: row[COL_WINDOW] || "",
@@ -924,9 +960,12 @@
           </thead>
           <tbody>
             ${dayPorts.map((p, i) => `
-              <tr>
+              <tr class="${p.protectionBool ? "protection-row" : ""}">
                 <td class="num">${i + 1}</td>
-                <td class="portcol" title="${escapeHtml(p.displayName || p.name)}">${escapeHtml(p.displayName || p.name)}</td>
+                <td class="portcol ${p.protectionBool ? "protection-port" : ""}" title="${escapeHtml(p.displayName || p.name)}">
+                  ${escapeHtml(p.displayName || p.name)}
+                  ${p.protectionBool ? `<span class="shield-mark" title="Protection Possible">🛡️</span>` : ``}
+                </td>
                 <td class="tiercol">${p.tier ? `<span class="tier-badge ${p.tier}">${escapeHtml(p.tier)}</span>` : "—"}</td>
                 <td class="typecol ${p.type === "Defence" ? "type-defence" : "type-attack"}">
                   <span class="type-icon">${p.type === "Defence" ? "🛡️" : "⚔️"}</span>${escapeHtml(p.type)}
@@ -955,17 +994,9 @@
     }
 
     function renderProtection(items) {
-      if (!items.length) {
-        els.protectionList.innerHTML = `<div class="protection-empty">No ports</div>`;
-        return;
-      }
-
-      els.protectionList.innerHTML = items.map(p => `
-        <div class="protection-item">
-          <span>${escapeHtml(p.displayName || p.name)}</span>
-          <strong>${escapeHtml(firstAvailableDay(p)?.label || "")}</strong>
-        </div>
-      `).join("");
+      els.protectionList.innerHTML = `
+        <div class="protection-empty">🛡️ Ports with protection possible are highlighted directly in the calendar.</div>
+      `;
     }
 
     function renderFactionCounts(listed) {
